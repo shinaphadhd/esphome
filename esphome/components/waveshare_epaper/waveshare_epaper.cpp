@@ -1908,6 +1908,11 @@ void WaveshareEPaper2P9InV2R2BWR::dump_config() {
   LOG_UPDATE_INTERVAL(this);
 }
 
+void WaveshareEPaper2P9InV2R2BWR::deep_sleep() {
+  this->command(0x10);
+  this->data(0x01);
+}
+
 int WaveshareEPaper2P9InV2R2BWR::get_width_internal() { return 128; }
 int WaveshareEPaper2P9InV2R2BWR::get_height_internal() { return 296; }
 
