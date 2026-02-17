@@ -2032,6 +2032,9 @@ void WaveshareEPaper2P9InV2R2BWR::deep_sleep() {
 int WaveshareEPaper2P9InV2R2BWR::get_width_internal() { return 128; }
 int WaveshareEPaper2P9InV2R2BWR::get_height_internal() { return 296; }
 int WaveshareEPaper2P9InV2R2BWR::get_width_controller() { return this->get_width_internal(); }
+void WaveshareEPaper2P9InV2R2BWR::set_full_update_every(uint32_t full_update_every) {
+  this->full_update_every_ = full_update_every;
+}
 
 void WaveshareEPaper2P9InV2R2::deep_sleep() {
   this->command(0x10);

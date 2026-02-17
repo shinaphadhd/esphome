@@ -452,6 +452,8 @@ class WaveshareEPaper2P9InV2R2BWR : public WaveshareEPaperBWR {
 
   void deep_sleep() override;
 
+  void set_full_update_every(uint32_t full_update_every);
+
  protected:
   void write_lut_(const uint8_t *lut, uint8_t size);
 
