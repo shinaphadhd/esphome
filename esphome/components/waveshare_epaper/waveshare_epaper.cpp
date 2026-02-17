@@ -1920,7 +1920,7 @@ void WaveshareEPaper2P9InV2R2BWR::display() {
     this->data(0xF7);
     this->command(0x20);
   } else {
-    // Partial update (black only)
+    // Partial update (black + red)
     this->reset_();
 
     this->write_lut_(PARTIAL_UPD_2IN9_LUT, PARTIAL_UPD_2IN9_LUT_SIZE);
@@ -1966,10 +1966,15 @@ void WaveshareEPaper2P9InV2R2BWR::display() {
     this->data(0x00);
     this->data(0x00);
 
-    // write b/w only
+    // write b/w + red
     this->command(0x24);
     this->start_data_();
     this->write_array(this->buffer_, buf_len_half);
+    this->end_data_();
+
+    this->command(0x26);
+    this->start_data_();
+    this->write_array(this->buffer_ + buf_len_half, buf_len_half);
     this->end_data_();
 
     // TurnOnDisplayPartial
