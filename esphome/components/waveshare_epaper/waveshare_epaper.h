@@ -442,6 +442,8 @@ class WaveshareEPaper2P9InV2R2 : public WaveshareEPaper {
 
 class WaveshareEPaper2P9InV2R2BWR : public WaveshareEPaperBWR {
  public:
+  WaveshareEPaper2P9InV2R2BWR();
+
   void initialize() override;
 
   void display() override;
@@ -451,9 +453,19 @@ class WaveshareEPaper2P9InV2R2BWR : public WaveshareEPaperBWR {
   void deep_sleep() override;
 
  protected:
+  void write_lut_(const uint8_t *lut, uint8_t size);
+
   int get_width_internal() override;
 
   int get_height_internal() override;
+
+  int get_width_controller() override;
+
+  uint32_t full_update_every_{30};
+  uint32_t at_update_{0};
+
+ private:
+  void reset_();
 };
 
 class WaveshareEPaper2P9InDKE : public WaveshareEPaper {

@@ -1836,19 +1836,19 @@ void WaveshareEPaper2P9InV2R2::dump_config() {
 }
 
 // ========================================================
-//               2.90in v2 rev2 (BWR init/display copy)
-// Uses the same init/display sequence as 2.7in B V2, but
-// with 2.9in resolution.
+//               2.90in v2 rev2 (BWR)
+// Uses the same init/update procedure as 2.90in v2 rev2,
+// but sends separate black/red buffers.
 // ========================================================
 
 void WaveshareEPaper2P9InV2R2BWR::initialize() {
   this->reset_();
-
-  this->wait_until_idle_();
-  this->command(0x12);
   this->wait_until_idle_();
 
-  this->command(0x00);
+  this->command(0x12);  // SWRESET
+  this->wait_until_idle_();
+
+  this->command(0x01);
   this->data(0x27);
   this->data(0x01);
   this->data(0x00);
@@ -1856,52 +1856,166 @@ void WaveshareEPaper2P9InV2R2BWR::initialize() {
   this->command(0x11);
   this->data(0x03);
 
-  uint32_t xend = this->get_width_controller() - 1;
-  uint32_t yend = this->get_height_internal() - 1;
+  // SetWindows(0, 0, w, h)
   this->command(0x44);
   this->data(0x00);
-  this->data((xend >> 3) & 0xff);
+  this->data(((this->get_width_controller() - 1) >> 3) & 0xFF);
 
   this->command(0x45);
   this->data(0x00);
   this->data(0x00);
-  this->data(yend & 0xff);
-  this->data((yend >> 8) & 0xff);
+  this->data((this->get_height_internal() - 1) & 0xFF);
+  this->data(((this->get_height_internal() - 1) >> 8) & 0xFF);
 
+  this->command(0x21);
+  this->data(0x00);
+  this->data(0x80);
+
+  // SetCursor(0, 0)
   this->command(0x4E);
   this->data(0x00);
-  this->command(0x4F);
+  this->command(0x4f);
   this->data(0x00);
   this->data(0x00);
-}
-
-void HOT WaveshareEPaper2P9InV2R2BWR::display() {
-  uint32_t buf_len = this->get_buffer_length_();
-  // COMMAND DATA START TRANSMISSION 1 (BLACK)
-  this->command(0x24);
-  delay(2);
-  for (uint32_t i = 0; i < buf_len; i++) {
-    this->data(this->buffer_[i]);
-  }
-  delay(2);
-
-  // COMMAND DATA START TRANSMISSION 2  (RED)
-  this->command(0x26);
-  delay(2);
-  for (uint32_t i = 0; i < buf_len; i++) {
-    this->data(this->buffer_[i]);
-  }
-
-  delay(2);
-
-  this->command(0x20);
 
   this->wait_until_idle_();
 }
 
+WaveshareEPaper2P9InV2R2BWR::WaveshareEPaper2P9InV2R2BWR() { this->reset_duration_ = 10; }
+
+void WaveshareEPaper2P9InV2R2BWR::reset_() {
+  if (this->reset_pin_ != nullptr) {
+    this->reset_pin_->digital_write(false);
+    delay(reset_duration_);  // NOLINT
+    this->reset_pin_->digital_write(true);
+    delay(reset_duration_);  // NOLINT
+  }
+}
+
+void WaveshareEPaper2P9InV2R2BWR::display() {
+  if (!this->wait_until_idle_()) {
+    this->status_set_warning();
+    ESP_LOGE(TAG, "fail idle 1");
+    return;
+  }
+
+  const uint32_t buf_len_half = this->get_buffer_length_() / 2u;
+
+  if (this->full_update_every_ == 1) {
+    // do single full update
+    this->command(0x24);
+    this->start_data_();
+    this->write_array(this->buffer_, buf_len_half);
+    this->end_data_();
+
+    this->command(0x26);
+    this->start_data_();
+    this->write_array(this->buffer_ + buf_len_half, buf_len_half);
+    this->end_data_();
+
+    // TurnOnDisplay
+    this->command(0x22);
+    this->data(0xF7);
+    this->command(0x20);
+    return;
+  }
+
+  if (this->at_update_ == 0) {
+    // do base update
+    this->command(0x24);
+    this->start_data_();
+    this->write_array(this->buffer_, buf_len_half);
+    this->end_data_();
+
+    this->command(0x26);
+    this->start_data_();
+    this->write_array(this->buffer_ + buf_len_half, buf_len_half);
+    this->end_data_();
+
+    // TurnOnDisplay
+    this->command(0x22);
+    this->data(0xF7);
+    this->command(0x20);
+  } else {
+    // do partial update
+    this->reset_();
+
+    this->write_lut_(PARTIAL_UPD_2IN9_LUT, PARTIAL_UPD_2IN9_LUT_SIZE);
+
+    this->command(0x37);
+    this->data(0x00);
+    this->data(0x00);
+    this->data(0x00);
+    this->data(0x00);
+    this->data(0x00);
+    this->data(0x40);
+    this->data(0x00);
+    this->data(0x00);
+    this->data(0x00);
+    this->data(0x00);
+
+    this->command(0x3C);
+    this->data(0x80);
+
+    this->command(0x22);
+    this->data(0xC0);
+    this->command(0x20);
+
+    if (!this->wait_until_idle_()) {
+      ESP_LOGE(TAG, "fail idle 2");
+    }
+
+    // SetWindows(0, 0, w, h)
+    this->command(0x44);
+    this->data(0x00);
+    this->data(((this->get_width_controller() - 1) >> 3) & 0xFF);
+
+    this->command(0x45);
+    this->data(0x00);
+    this->data(0x00);
+    this->data((this->get_height_internal() - 1) & 0xFF);
+    this->data(((this->get_height_internal() - 1) >> 8) & 0xFF);
+
+    // SetCursor(0, 0)
+    this->command(0x4E);
+    this->data(0x00);
+    this->command(0x4f);
+    this->data(0x00);
+    this->data(0x00);
+
+    // write b/w + red
+    this->command(0x24);
+    this->start_data_();
+    this->write_array(this->buffer_, buf_len_half);
+    this->end_data_();
+
+    this->command(0x26);
+    this->start_data_();
+    this->write_array(this->buffer_ + buf_len_half, buf_len_half);
+    this->end_data_();
+
+    // TurnOnDisplayPartial
+    this->command(0x22);
+    this->data(0x0F);
+    this->command(0x20);
+  }
+
+  this->at_update_ = (this->at_update_ + 1) % this->full_update_every_;
+}
+
+void WaveshareEPaper2P9InV2R2BWR::write_lut_(const uint8_t *lut, const uint8_t size) {
+  // COMMAND WRITE LUT REGISTER
+  this->command(0x32);
+  for (uint8_t i = 0; i < size; i++)
+    this->data(lut[i]);
+}
+
 void WaveshareEPaper2P9InV2R2BWR::dump_config() {
   LOG_DISPLAY("", "Waveshare E-Paper", this);
-  ESP_LOGCONFIG(TAG, "  Model: 2.9inV2R2 (BWR init/display copy)");
+  ESP_LOGCONFIG(TAG,
+                "  Model: 2.9inV2R2 (BWR)\n"
+                "  Full Update Every: %" PRIu32,
+                this->full_update_every_);
   LOG_PIN("  Reset Pin: ", this->reset_pin_);
   LOG_PIN("  DC Pin: ", this->dc_pin_);
   LOG_PIN("  Busy Pin: ", this->busy_pin_);
@@ -1915,6 +2029,7 @@ void WaveshareEPaper2P9InV2R2BWR::deep_sleep() {
 
 int WaveshareEPaper2P9InV2R2BWR::get_width_internal() { return 128; }
 int WaveshareEPaper2P9InV2R2BWR::get_height_internal() { return 296; }
+int WaveshareEPaper2P9InV2R2BWR::get_width_controller() { return this->get_width_internal(); }
 
 void WaveshareEPaper2P9InV2R2::deep_sleep() {
   this->command(0x10);
