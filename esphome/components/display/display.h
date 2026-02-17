@@ -389,6 +389,9 @@ class Display : public PollingComponent {
   /// Fill a rectangle with the top left point at [x1,y1] and the bottom right point at [x1+width,y1+height].
   void filled_rectangle(int x1, int y1, int width, int height, Color color = COLOR_ON);
 
+  /// Fill a rounded rectangle with the top left point at [x1,y1], size [width,height], and corner radius.
+  void filled_round_rectangle(int x1, int y1, int width, int height, int radius, Color color = COLOR_ON);
+
   /// Draw the outline of a circle centered around [center_x,center_y] with the radius radius with the given color.
   void circle(int center_x, int center_xy, int radius, Color color = COLOR_ON);
 

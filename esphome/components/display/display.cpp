@@ -112,6 +112,38 @@ void Display::filled_rectangle(int x1, int y1, int width, int height, Color colo
   }
 }
 
+void Display::filled_round_rectangle(int x1, int y1, int width, int height, int radius, Color color) {
+  if (width <= 0 || height <= 0)
+    return;
+
+  if (radius < 0)
+    radius = 0;
+
+  int max_radius = width < height ? width / 2 : height / 2;
+  if (radius > max_radius)
+    radius = max_radius;
+
+  if (radius == 0) {
+    this->filled_rectangle(x1, y1, width, height, color);
+    return;
+  }
+
+  int inner_width = width - 2 * radius;
+  int inner_height = height - 2 * radius;
+
+  if (inner_width > 0)
+    this->filled_rectangle(x1 + radius, y1, inner_width, height, color);
+  if (inner_height > 0) {
+    this->filled_rectangle(x1, y1 + radius, radius, inner_height, color);
+    this->filled_rectangle(x1 + width - radius, y1 + radius, radius, inner_height, color);
+  }
+
+  this->filled_circle(x1 + radius, y1 + radius, radius, color);
+  this->filled_circle(x1 + width - radius - 1, y1 + radius, radius, color);
+  this->filled_circle(x1 + radius, y1 + height - radius - 1, radius, color);
+  this->filled_circle(x1 + width - radius - 1, y1 + height - radius - 1, radius, color);
+}
+
 void HOT Display::circle(int center_x, int center_xy, int radius, Color color) {
   int dx = -radius;
   int dy = 0;
