@@ -1814,6 +1814,8 @@ void WaveshareEPaper2P9InV2R2::display() {
   }
 
   this->at_update_ = (this->at_update_ + 1) % this->full_update_every_;
+
+  this->deep_sleep();
 }
 
 void WaveshareEPaper2P9InV2R2::write_lut_(const uint8_t *lut, const uint8_t size) {
