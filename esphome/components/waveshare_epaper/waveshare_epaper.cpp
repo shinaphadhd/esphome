@@ -1903,27 +1903,8 @@ void WaveshareEPaper2P9InV2R2BWR::display() {
 
   const uint32_t buf_len_half = this->get_buffer_length_() / 2u;
 
-  if (this->full_update_every_ == 1) {
-    // do single full update
-    this->command(0x24);
-    this->start_data_();
-    this->write_array(this->buffer_, buf_len_half);
-    this->end_data_();
-
-    this->command(0x26);
-    this->start_data_();
-    this->write_array(this->buffer_ + buf_len_half, buf_len_half);
-    this->end_data_();
-
-    // TurnOnDisplay
-    this->command(0x22);
-    this->data(0xF7);
-    this->command(0x20);
-    return;
-  }
-
-  if (this->at_update_ == 0) {
-    // do base update
+  if (this->full_update_every_ == 1 || this->at_update_ == 0) {
+    // Full update (black + red)
     this->command(0x24);
     this->start_data_();
     this->write_array(this->buffer_, buf_len_half);
@@ -1939,7 +1920,7 @@ void WaveshareEPaper2P9InV2R2BWR::display() {
     this->data(0xF7);
     this->command(0x20);
   } else {
-    // do partial update
+    // Partial update (black only)
     this->reset_();
 
     this->write_lut_(PARTIAL_UPD_2IN9_LUT, PARTIAL_UPD_2IN9_LUT_SIZE);
@@ -1985,15 +1966,10 @@ void WaveshareEPaper2P9InV2R2BWR::display() {
     this->data(0x00);
     this->data(0x00);
 
-    // write b/w + red
+    // write b/w only
     this->command(0x24);
     this->start_data_();
     this->write_array(this->buffer_, buf_len_half);
-    this->end_data_();
-
-    this->command(0x26);
-    this->start_data_();
-    this->write_array(this->buffer_ + buf_len_half, buf_len_half);
     this->end_data_();
 
     // TurnOnDisplayPartial
@@ -2003,6 +1979,8 @@ void WaveshareEPaper2P9InV2R2BWR::display() {
   }
 
   this->at_update_ = (this->at_update_ + 1) % this->full_update_every_;
+
+  this->deep_sleep();
 }
 
 void WaveshareEPaper2P9InV2R2BWR::write_lut_(const uint8_t *lut, const uint8_t size) {
